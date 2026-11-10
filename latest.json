@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "latestVersionCode": 101,
+  "latestVersionName": "1.0.101",
+  "minimumVersionCode": 0,
+  "mandatory": false,
+  "apkUrl": "https://github.com/jgs13/gama-drive-downloads/releases/download/v1.0.101/Gama-Drive.apk",
+  "message": "Uma nova versão do Gama Drive está disponível."
+}
