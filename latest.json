@@ -1,9 +1,9 @@
 {
   "enabled": true,
-  "latestVersionCode": 168,
-  "latestVersionName": "1.0.168",
+  "latestVersionCode": 169,
+  "latestVersionName": "1.0.169",
   "minimumVersionCode": 0,
   "mandatory": false,
-  "apkUrl": "https://github.com/jgs13/gama-drive-downloads/releases/download/v1.0.168/Gama-Drive.apk",
+  "apkUrl": "https://github.com/jgs13/gama-drive-downloads/releases/download/v1.0.169/Gama-Drive.apk",
   "message": "Uma nova versão do Gama Drive está disponível."
 }
