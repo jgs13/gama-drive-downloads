@@ -2,6 +2,91 @@ const HEADERS = ["AT ID","Sequence","Stop","SPX TN","Destination Address","Bairr
 const $ = id => document.getElementById(id);
 let stops = JSON.parse(localStorage.getItem("shopeeRouteStops") || "[]");
 let pendingCandidate = null;
+let selectedGoogleCandidate = null;
+const GOOGLE_KEY_STORAGE="shopeeRouteGoogleMapsKey";
+let googleAutocomplete = null;
+let googleLoaderPromise = null;
+
+function googleKey(){return localStorage.getItem(GOOGLE_KEY_STORAGE)||"";}
+function setGoogleStatus(message,bad=false){
+  const el=$("googleKeyStatus");if(!el)return;
+  el.textContent=message;el.classList.toggle("bad",bad);
+}
+async function loadGooglePlaces(key){
+  if(googleLoaderPromise&&window.google?.maps?.importLibrary)return googleLoaderPromise;
+  googleLoaderPromise=new Promise((resolve,reject)=>{
+    if(window.google?.maps?.importLibrary){resolve();return;}
+    const old=document.getElementById("googleMapsScript");if(old)old.remove();
+    const script=document.createElement("script");script.id="googleMapsScript";
+    script.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(key)+"&v=weekly&loading=async";
+    script.async=true;script.defer=true;
+    script.onload=resolve;script.onerror=()=>reject(new Error("Não foi possível carregar o Google Maps. Confira a chave, as APIs ativadas e as restrições."));
+    document.head.appendChild(script);
+  });
+  return googleLoaderPromise;
+}
+function googleAddressData(components){
+  const find=type=>components?.find(c=>c.types?.includes(type))?.longText||"";
+  return {
+    number:find("street_number"),street:find("route"),
+    neighborhood:find("sublocality_level_1")||find("neighborhood")||find("sublocality"),
+    city:find("locality")||find("administrative_area_level_2")||find("postal_town"),
+    state:find("administrative_area_level_1"),country:find("country"),postal:find("postal_code")
+  };
+}
+async function initializeGooglePlaces(){
+  const key=googleKey();if(!key)return;
+  try{
+    await loadGooglePlaces(key);
+    const {PlaceAutocompleteElement}=await google.maps.importLibrary("places");
+    const mount=$("googlePlaceMount");if(!mount)return;
+    mount.replaceChildren();
+    googleAutocomplete=new PlaceAutocompleteElement({includedRegionCodes:["br"]});
+    googleAutocomplete.placeholder="Ex.: Praça Bom Jesus, 111, Anápolis";
+    googleAutocomplete.style.width="100%";
+    googleAutocomplete.addEventListener("gmp-select",async event=>{
+      try{
+        setGoogleStatus("Carregando detalhes do endereço...");
+        const place=event.placePrediction.toPlace();
+        await place.fetchFields({fields:["formattedAddress","addressComponents","location","displayName"]});
+        const data=googleAddressData(place.addressComponents||[]);
+        const state=normalize(data.state),country=normalize(data.country);
+        const city=normalize(data.city);
+        if(!city.includes("anapolis")||!state.includes("goias")||!country.includes("brasil")){
+          selectedGoogleCandidate=null;
+          setGoogleStatus("O resultado selecionado não pertence a Anápolis-GO. Escolha outro endereço.",true);
+          return;
+        }
+        const street=[data.street,data.number].filter(Boolean).join(", ");
+        const formatted=place.formattedAddress||[street,data.neighborhood,data.city,data.state,data.postal].filter(Boolean).join(", ");
+        $("address").value=street||formatted;
+        $("neighborhood").value=data.neighborhood||"";
+        selectedGoogleCandidate={
+          display_name:formatted,
+          address:{road:data.street,house_number:data.number,suburb:data.neighborhood,city:data.city,state:data.state,country:data.country},
+          _postal:data.postal||"",
+          _lat:place.location?.lat?.()??"",
+          _lng:place.location?.lng?.()??"",
+          _neighborhood:data.neighborhood||"",
+          _city:"Anápolis",
+          _houseNumberVerified:!!data.number,
+          _requestedHouseNumber:data.number||""
+        };
+        setGoogleStatus("Endereço do Google selecionado. Confira os campos e toque em Verificar endereço.");
+      }catch(error){selectedGoogleCandidate=null;setGoogleStatus(error.message||"Falha ao obter detalhes do endereço.",true);}
+    });
+    mount.appendChild(googleAutocomplete);
+    setGoogleStatus("Google Maps conectado neste aparelho.");
+  }catch(error){setGoogleStatus(error.message||"Falha ao iniciar Google Maps.",true);}
+}
+$("saveGoogleKey")?.addEventListener("click",()=>{
+  const value=$("googleMapsKey").value.trim();
+  if(!value){setGoogleStatus("Cole a chave de API antes de salvar.",true);return;}
+  localStorage.setItem(GOOGLE_KEY_STORAGE,value);googleLoaderPromise=null;selectedGoogleCandidate=null;
+  initializeGooglePlaces();
+});
+if($("googleMapsKey"))$("googleMapsKey").value=googleKey();
+if(googleKey())initializeGooglePlaces();
 
 function save(){ localStorage.setItem("shopeeRouteStops", JSON.stringify(stops)); render(); }
 function normalizeAddress(value){
@@ -142,9 +227,10 @@ $("stopForm").addEventListener("submit",async e=>{
   if(stops.some(s=>String(s.stop)===stop)){showValidation("bad","Número já cadastrado","Já existe um registro com esse número de parada. Escolha outro número.");return;}
   $("validateButton").disabled=true;$("validateButton").textContent="Verificando...";$("validationBox").classList.add("hidden");
   try{
-    const candidate=await lookupAddress(address,neighborhood);
+    const candidate=selectedGoogleCandidate||await lookupAddress(address,neighborhood);
     if(!candidate){showValidation("bad","Endereço não confirmado em Anápolis","Não encontrei um resultado que confirme simultaneamente Anápolis, Goiás e Brasil. Não vou cadastrar um endereço de outro município. Confira o logradouro e o bairro e tente novamente.");return;}
     pendingCandidate={stop,address,neighborhood,candidate};
+    selectedGoogleCandidate=null;
     const box=$("validationBox");box.className="validation good";box.replaceChildren();
     const strong=document.createElement("strong");strong.textContent=candidate._requestedHouseNumber&&!candidate._houseNumberVerified?"Rua localizada, mas número não confirmado":"Confirme se este é o endereço correto";
     const p=document.createElement("p");p.textContent=candidate.display_name;
@@ -158,7 +244,11 @@ $("stopForm").addEventListener("submit",async e=>{
 function confirmStop(){
   if(!pendingCandidate)return;
   const {stop,address,neighborhood}=pendingCandidate;
-  stops.push({stop,address,neighborhood,city:"Anápolis",values:["","",stop,"",address,neighborhood,"Anápolis","","",""]});
+  const {candidate}=pendingCandidate;
+  const finalAddress=candidate._google?address:(candidate._requestedHouseNumber&&candidate._houseNumberVerified?address:address);
+  const finalNeighborhood=candidate._neighborhood||neighborhood;
+  const values=["","",stop,"",finalAddress,finalNeighborhood,"Anápolis",candidate._postal||"",candidate._lat??"",candidate._lng??""];
+  stops.push({stop,address:finalAddress,neighborhood:finalNeighborhood,city:"Anápolis",values});
   pendingCandidate=null;$("validationBox").classList.add("hidden");$("stopForm").reset();save();$("stopNumber").focus();
 }
 $("clearButton").onclick=()=>{if(!stops.length)return;if(confirm("Apagar todos os pacotes desta rota?")){stops=[];save();}};
