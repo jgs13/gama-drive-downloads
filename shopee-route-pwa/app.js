@@ -21,6 +21,24 @@ function groupStops(){
     return (Number.isFinite(an)?an:999999)-(Number.isFinite(bn)?bn:999999);
   });
 }
+function exportGroupedRows(groups){
+  return groups.map((group,index)=>{
+    const rows=group.items.map(item=>Array.isArray(item.values)?item.values:[]);
+    const firstValue=column=>{
+      for(const row of rows){
+        const value=row[column];
+        if(value!==undefined&&value!==null&&String(value).trim()!=="")return value;
+      }
+      return "";
+    };
+    const packageCodes=[...new Set(rows.map(row=>String(row[3]??"").trim()).filter(Boolean))];
+    const values=HEADERS.map((_,column)=>firstValue(column));
+    values[2]=`${index+1} (${group.items.length} ${group.items.length===1?'pacote':'pacotes'})`;
+    values[3]=packageCodes.join(", ");
+    values[4]=group.address||firstValue(4);
+    return values;
+  });
+}
 function render(){
   const groups=groupStops(), packages=stops.length, repeatedPackages=packages-groups.length;
   $("stopCount").textContent = `${packages} ${packages===1?"pacote":"pacotes"}`;
@@ -131,7 +149,8 @@ $("exportButton").onclick=async()=>{
     if(!window.ExcelJS)throw new Error("A biblioteca Excel não carregou. Conecte-se à internet e atualize a página.");
     const workbook=new ExcelJS.Workbook();const sheet=workbook.addWorksheet("Sheet1");
     sheet.addRow(HEADERS);sheet.getRow(1).font={bold:true};sheet.views=[{state:"frozen",ySplit:1}];
-    stops.forEach(s=>sheet.addRow(Array.isArray(s.values)?s.values:["","",s.stop,"",s.address,s.neighborhood,s.city||"Anápolis","","",""]));
+    const groupedRows=exportGroupedRows(groupStops());
+    groupedRows.forEach(values=>sheet.addRow(values));
     sheet.autoFilter={from:"A1",to:`J${Math.max(1,stops.length+1)}`};
     const out=await workbook.xlsx.writeBuffer();const blob=new Blob([out],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=`Shopee_Rota_Anapolis_${new Date().toISOString().slice(0,10)}.xlsx`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
