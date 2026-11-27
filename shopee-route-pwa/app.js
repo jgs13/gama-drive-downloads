@@ -29,7 +29,7 @@ function googleAddressData(components){
   const find=type=>components?.find(c=>c.types?.includes(type))?.longText||"";
   return {
     number:find("street_number"),street:find("route"),
-    neighborhood:find("sublocality_level_1")||find("neighborhood")||find("sublocality"),
+    neighborhood:find("sublocality_level_1")||find("neighborhood")||find("sublocality")||find("sublocality_level_2")||find("sublocality_level_3"),
     city:find("locality")||find("administrative_area_level_2")||find("postal_town"),
     state:find("administrative_area_level_1"),country:find("country"),postal:find("postal_code")
   };
@@ -59,9 +59,13 @@ async function initializeGooglePlaces(){
         }
         const street=[data.street,data.number].filter(Boolean).join(", ");
         const formatted=place.formattedAddress||[street,data.neighborhood,data.city,data.state,data.postal].filter(Boolean).join(", ");
-        $("address").value=street||formatted;
+        // A seleção do Google preenche os dois campos usados no cadastro.
+        $("address").value=formatted;
         $("neighborhood").value=data.neighborhood||"";
+        $("address").dispatchEvent(new Event("change",{bubbles:true}));
+        $("neighborhood").dispatchEvent(new Event("change",{bubbles:true}));
         selectedGoogleCandidate={
+          _google:true,
           display_name:formatted,
           address:{road:data.street,house_number:data.number,suburb:data.neighborhood,city:data.city,state:data.state,country:data.country},
           _postal:data.postal||"",
@@ -87,6 +91,11 @@ $("saveGoogleKey")?.addEventListener("click",()=>{
 });
 if($("googleMapsKey"))$("googleMapsKey").value=googleKey();
 if(googleKey())initializeGooglePlaces();
+
+// Se o usuário editar manualmente os campos após escolher uma sugestão,
+// descarta os dados vinculados à seleção para evitar CEP/coordenadas desatualizados.
+$("address")?.addEventListener("input",()=>{selectedGoogleCandidate=null;});
+$("neighborhood")?.addEventListener("input",()=>{selectedGoogleCandidate=null;});
 
 function save(){ localStorage.setItem("shopeeRouteStops", JSON.stringify(stops)); render(); }
 function normalizeAddress(value){
