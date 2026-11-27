@@ -141,10 +141,10 @@ function confirmStop(){
 $("clearButton").onclick=()=>{if(!stops.length)return;if(confirm("Apagar todos os pacotes desta rota?")){stops=[];save();}};
 function spokenStopNumber(transcript){
   const raw=String(transcript||"").trim();
-  const digitMatch=raw.match(/\\d+/);
+  const digitMatch=raw.match(/\d+/);
   if(digitMatch)return String(Number(digitMatch[0]));
-  const text=normalize(raw).replace(/-/g," ").replace(/\\s+/g," ").trim()
-    .replace(/^(numero|parada)\\s+/,"").replace(/\\s+(numero|parada)$/,"");
+  const text=normalize(raw).replace(/-/g," ").replace(/\s+/g," ").trim()
+    .replace(/^(numero|parada)\s+/,"").replace(/\s+(numero|parada)$/,"");
   const units={zero:0,um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,dezesseis:16,dezessete:17,dezoito:18,dezenove:19};
   const tens={vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90};
   if(text==="cem"||text==="cento")return "100";
