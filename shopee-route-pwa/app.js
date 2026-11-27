@@ -80,7 +80,7 @@ function isAnapolis(address){
 }
 function splitStreetAndNumber(value){
   const input=String(value||"").trim();
-  const match=input.match(/(?:,|\\s)+(?:n(?:º|°|o)?\\.?\\s*)?(\\d+[A-Za-z]?)\\s*$/i);
+  const match=input.match(/(?:,|\s)+(?:n(?:º|°|o)?\.?\s*)?(\d+[A-Za-z]?)\s*$/i);
   if(!match)return {street:input,number:""};
   return {street:input.slice(0,match.index).replace(/[ ,]+$/,"").trim(),number:match[1]};
 }
