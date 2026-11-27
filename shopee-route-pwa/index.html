@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="Organize paradas de entrega e exporte a planilha Shopee de Anápolis-GO.">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+  <title>Shopee Route</title>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-mark">SR</div>
+    <div><strong>Shopee Route</strong><small>Rotas • Anápolis-GO</small></div>
+    <span class="status" id="connectionStatus">Conectado</span>
+  </header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow">CONTROLE DE ENTREGAS</p>
+      <h1>Monte sua rota.</h1>
+      <p>Importe a planilha Shopee, agrupe os endereços repetidos e veja quantos pacotes e paradas reais existem.</p>
+    </section>
+    <section class="panel">
+      <div class="section-head"><div><h2>Importar planilha Shopee</h2><p>Leia os pacotes e agrupe automaticamente os endereços repetidos.</p></div></div>
+      <label for="shopeeFile">Arquivo original da Shopee (.xlsx)</label>
+      <input id="shopeeFile" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      <button class="secondary" id="importButton" type="button">Importar e agrupar pacotes</button>
+      <p class="hint">Cada linha com endereço válido será contada como 1 pacote. Endereços iguais serão reunidos em uma única parada. A importação substitui a rota que estiver aberta.</p>
+      <div id="importStatus" class="validation hidden" aria-live="polite"></div>
+    </section>
+    <section class="panel">
+      <div class="section-head"><div><h2>Adicionar pacote manualmente</h2><p>Informe os dados que você tem.</p></div><span class="counter" id="stopCount">0 pacotes</span></div>
+      <form id="stopForm">
+        <label for="stopNumber">Número da parada / identificação</label>
+        <input id="stopNumber" inputmode="numeric" placeholder="Ex.: 15" required>
+        <label for="address">Endereço completo</label>
+        <div class="input-action"><input id="address" placeholder="Rua, avenida, número, complemento" autocomplete="street-address" required><button type="button" class="mic" id="voiceAddress" aria-label="Ditado por voz" title="Ditado por voz">🎙</button></div>
+        <label for="neighborhood">Bairro</label>
+        <input id="neighborhood" placeholder="Ex.: Jardim América">
+        <div class="fixed-city"><span>Município permitido</span><strong>Anápolis - Goiás</strong></div>
+        <button class="primary" id="validateButton" type="submit">Verificar endereço</button>
+      </form>
+      <div id="validationBox" class="validation hidden" aria-live="polite"></div>
+    </section>
+    <section class="panel">
+      <div class="section-head"><div><h2>Resumo da rota</h2><p>Pacotes lançados x endereços únicos.</p></div><button class="subtle" id="clearButton" type="button">Limpar rota</button></div>
+      <div class="metrics">
+        <div><strong id="totalStops">0</strong><span>Pacotes lançados</span></div>
+        <div><strong id="uniqueStops">0</strong><span>Paradas únicas</span></div>
+        <div><strong id="duplicates">0</strong><span>Pacotes em endereços repetidos</span></div>
+      </div>
+      <div id="emptyState" class="empty">Nenhum pacote cadastrado ainda.</div>
+      <div id="stopsList" class="stops-list"></div>
+      <button class="primary export" id="exportButton" type="button" disabled>Exportar planilha Excel Shopee</button>
+      <button class="secondary" id="csvButton" type="button" disabled>Exportar CSV agrupado para Circuit</button>
+      <p class="hint">O arquivo mantém os 10 cabeçalhos originais em inglês. Campos não informados ficam vazios.</p>
+    </section>
+    <details class="panel help">
+      <summary>Modelo e funcionamento</summary>
+      <p>A importação lê os pacotes da planilha e agrupa endereços repetidos para calcular as paradas únicas. A exportação gera um arquivo Excel com uma linha por pacote e os 10 cabeçalhos originais: AT ID, Sequence, Stop, SPX TN, Destination Address, Bairro, City, Zipcode/Postal code, Latitude e Longitude.</p>
+      <p>AT ID, Sequence, SPX TN, CEP e coordenadas não são inventados. A cidade só é preenchida como Anápolis depois que o endereço é confirmado dentro do município.</p>
+      <p>Para validar endereços, o aparelho precisa estar conectado à internet. A rota fica salva neste aparelho.</p>
+    </details>
+  </main>
+  <footer>Feito para organizar entregas em Anápolis-GO.</footer>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
