@@ -33,7 +33,7 @@ function exportGroupedRows(groups){
     };
     const packageCodes=[...new Set(rows.map(row=>String(row[3]??"").trim()).filter(Boolean))];
     const values=HEADERS.map((_,column)=>firstValue(column));
-    values[2]=`${index+1} (${group.items.length} ${group.items.length===1?'pacote':'pacotes'})`;
+    values[2]=`Parada ${index+1} - ${group.items.length} ${group.items.length===1?'pacote':'pacotes'}`;
     values[3]=packageCodes.join(", ");
     values[4]=group.address||firstValue(4);
     return values;
