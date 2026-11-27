@@ -183,6 +183,11 @@ function spokenStopNumber(transcript){
   }
   return total>0&&total<=999?String(total):null;
 }
+function formatSpokenAddress(value){
+  const cleaned=String(value||"").trim().replace(/\\s+(?:n[uú]mero|n[º°o])\\s+(?=\\d)/i," ");
+  const parsed=splitStreetAndNumber(cleaned);
+  return parsed.number&&parsed.street?`${parsed.street}, ${parsed.number}`:cleaned;
+}
 function startVoice(targetId,buttonId,fieldName){
   const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SpeechRecognition){showValidation("bad","Ditado não disponível","Abra o aplicativo no Chrome atualizado e permita o uso do microfone.");return;}
@@ -199,7 +204,7 @@ function startVoice(targetId,buttonId,fieldName){
     }else{
       const phrase=alternatives[0]||"";
       if(!phrase){showValidation("bad","Não ouvi o bairro","Fale novamente, aproximando-se do microfone.");return;}
-      field.value=phrase;
+      field.value=targetId==="address"?formatSpokenAddress(phrase):phrase;
     }
     field.dispatchEvent(new Event("input",{bubbles:true}));
     field.dispatchEvent(new Event("change",{bubbles:true}));
