@@ -139,13 +139,36 @@ function confirmStop(){
   pendingCandidate=null;$("validationBox").classList.add("hidden");$("stopForm").reset();save();$("stopNumber").focus();
 }
 $("clearButton").onclick=()=>{if(!stops.length)return;if(confirm("Apagar todos os pacotes desta rota?")){stops=[];save();}};
-$("voiceAddress").onclick=()=>{
+function spokenStopNumber(transcript){
+  const text=normalize(transcript).replace(/-/g," ").replace(/\\s+/g," ").trim();
+  if(/^\\d+$/.test(text))return text;
+  const units={zero:0,um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,dezesseis:16,dezessete:17,dezoito:18,dezenove:19};
+  const tens={vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90};
+  const words=text.split(" ").filter(word=>word!=="e");
+  if(words.length===1&&units[words[0]]!==undefined)return String(units[words[0]]);
+  if(words.length===1&&tens[words[0]]!==undefined)return String(tens[words[0]]);
+  if(words.length===2&&tens[words[0]]!==undefined&&units[words[1]]!==undefined)return String(tens[words[0]]+units[words[1]]);
+  if(words.length===1&&words[0]==="cem")return "100";
+  return transcript.trim();
+}
+function startVoice(targetId,buttonId,fieldName){
   const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SpeechRecognition){showValidation("bad","Ditado não disponível","Use o teclado por voz do seu celular ou abra o app no Chrome atualizado.");return;}
-  const recognition=new SpeechRecognition();recognition.lang="pt-BR";recognition.interimResults=false;recognition.maxAlternatives=1;
-  $("voiceAddress").textContent="…";recognition.onresult=e=>{$("address").value=e.results[0][0].transcript;};
-  recognition.onerror=()=>showValidation("bad","Falha no ditado","Verifique a permissão do microfone.");recognition.onend=()=>$("voiceAddress").textContent="🎙";recognition.start();
-};
+  const button=$(buttonId),recognition=new SpeechRecognition();
+  recognition.lang="pt-BR";recognition.interimResults=false;recognition.maxAlternatives=1;
+  button.textContent="…";button.disabled=true;
+  recognition.onresult=e=>{
+    const transcript=e.results[0][0].transcript.trim();
+    $(targetId).value=targetId==="stopNumber"?spokenStopNumber(transcript):transcript;
+    $(targetId).dispatchEvent(new Event("input",{bubbles:true}));
+  };
+  recognition.onerror=()=>showValidation("bad","Falha no ditado",`Não consegui reconhecer ${fieldName}. Verifique a permissão do microfone e tente novamente.`);
+  recognition.onend=()=>{button.textContent="🎙";button.disabled=false;};
+  try{recognition.start();}catch(error){button.textContent="🎙";button.disabled=false;showValidation("bad","Não foi possível iniciar o microfone","Tente novamente em alguns segundos.");}
+}
+$("voiceAddress").onclick=()=>startVoice("address","voiceAddress","endereço");
+$("voiceStopNumber").onclick=()=>startVoice("stopNumber","voiceStopNumber","número da parada");
+$("voiceNeighborhood").onclick=()=>startVoice("neighborhood","voiceNeighborhood","bairro");
 $("exportButton").onclick=async()=>{
   const btn=$("exportButton");btn.disabled=true;btn.textContent="Gerando Excel...";
   try{
