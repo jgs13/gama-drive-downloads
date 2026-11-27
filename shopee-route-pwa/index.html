@@ -36,6 +36,15 @@
       <form id="stopForm">
         <label for="stopNumber">Número da parada / identificação</label>
         <div class="input-action"><input id="stopNumber" inputmode="numeric" placeholder="Ex.: 15" required><button type="button" class="mic" id="voiceStopNumber" aria-label="Ditado do número da parada" title="Ditado do número da parada">🎙</button></div>
+        <details class="google-config">
+          <summary>Configurar busca do Google Maps</summary>
+          <label for="googleMapsKey">Chave de API do Google Maps</label>
+          <div class="input-action"><input id="googleMapsKey" type="password" autocomplete="off" placeholder="Cole sua chave de API aqui"><button type="button" class="secondary" id="saveGoogleKey">Salvar</button></div>
+          <p class="hint" id="googleKeyStatus">A chave fica salva somente neste aparelho. Restrinja-a ao domínio jgs13.github.io e à Maps JavaScript API / Places API (New).</p>
+        </details>
+        <label>Buscar endereço no Google Maps</label>
+        <div id="googlePlaceMount" class="google-place-mount"></div>
+        <p class="hint">Digite o endereço e selecione uma sugestão do Google. Os dados de CEP e coordenadas serão preenchidos automaticamente.</p>
         <label for="address">Endereço completo</label>
         <div class="input-action"><input id="address" placeholder="Rua, avenida, número, complemento" autocomplete="street-address" required><button type="button" class="mic" id="voiceAddress" aria-label="Ditado por voz" title="Ditado por voz">🎙</button></div>
         <label for="neighborhood">Bairro</label>
