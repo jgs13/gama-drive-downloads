@@ -35,11 +35,11 @@
       <div class="section-head"><div><h2>Adicionar pacote manualmente</h2><p>Informe os dados que você tem.</p></div><span class="counter" id="stopCount">0 pacotes</span></div>
       <form id="stopForm">
         <label for="stopNumber">Número da parada / identificação</label>
-        <input id="stopNumber" inputmode="numeric" placeholder="Ex.: 15" required>
+        <div class="input-action"><input id="stopNumber" inputmode="numeric" placeholder="Ex.: 15" required><button type="button" class="mic" id="voiceStopNumber" aria-label="Ditado do número da parada" title="Ditado do número da parada">🎙</button></div>
         <label for="address">Endereço completo</label>
         <div class="input-action"><input id="address" placeholder="Rua, avenida, número, complemento" autocomplete="street-address" required><button type="button" class="mic" id="voiceAddress" aria-label="Ditado por voz" title="Ditado por voz">🎙</button></div>
         <label for="neighborhood">Bairro</label>
-        <input id="neighborhood" placeholder="Ex.: Jardim América">
+        <div class="input-action"><input id="neighborhood" placeholder="Ex.: Jardim América" autocomplete="address-level3"><button type="button" class="mic" id="voiceNeighborhood" aria-label="Ditado do bairro" title="Ditado do bairro">🎙</button></div>
         <div class="fixed-city"><span>Município permitido</span><strong>Anápolis - Goiás</strong></div>
         <button class="primary" id="validateButton" type="submit">Verificar endereço</button>
       </form>
