@@ -165,7 +165,7 @@ function csvEscape(value){const s=String(value??"");return `"${s.replace(/"/g,'"
 $("csvButton").onclick=()=>{
   const groups=groupStops();
   const rows=[HEADERS,...exportGroupedRows(groups)];
-  const output="\\uFEFF"+rows.map(row=>row.map(csvEscape).join(",")).join("\\r\\n");
+  const output="\uFEFF"+rows.map(row=>row.map(csvEscape).join(",")).join("\r\n");
   const blob=new Blob([output],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");
   a.href=url;a.download=`Shopee_Rota_Circuit_${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 };
