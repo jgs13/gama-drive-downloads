@@ -149,7 +149,7 @@ function spokenStopNumber(transcript){
   if(words.length===1&&tens[words[0]]!==undefined)return String(tens[words[0]]);
   if(words.length===2&&tens[words[0]]!==undefined&&units[words[1]]!==undefined)return String(tens[words[0]]+units[words[1]]);
   if(words.length===1&&words[0]==="cem")return "100";
-  return transcript.trim();
+  return null;
 }
 function startVoice(targetId,buttonId,fieldName){
   const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
@@ -159,7 +159,13 @@ function startVoice(targetId,buttonId,fieldName){
   button.textContent="…";button.disabled=true;
   recognition.onresult=e=>{
     const transcript=e.results[0][0].transcript.trim();
-    $(targetId).value=targetId==="stopNumber"?spokenStopNumber(transcript):transcript;
+    if(targetId==="stopNumber"){
+      const number=spokenStopNumber(transcript);
+      if(number===null){showValidation("bad","Número não reconhecido","Fale o número da parada, por exemplo: quinze, vinte e cinco ou trinta.");return;}
+      $(targetId).value=number;
+    }else{
+      $(targetId).value=transcript;
+    }
     $(targetId).dispatchEvent(new Event("input",{bubbles:true}));
   };
   recognition.onerror=()=>showValidation("bad","Falha no ditado",`Não consegui reconhecer ${fieldName}. Verifique a permissão do microfone e tente novamente.`);
