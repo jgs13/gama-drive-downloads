@@ -78,12 +78,35 @@ function isAnapolis(address){
   const vals=[address.city,address.town,address.village,address.municipality,address.county,address.city_district,address.state,address.country].filter(Boolean).join(" | ");
   const n=normalize(vals);return n.includes("anapolis") && n.includes("goias") && n.includes("brasil");
 }
+function splitStreetAndNumber(value){
+  const input=String(value||"").trim();
+  const match=input.match(/(?:,|\\s)+(?:n(?:º|°|o)?\\.?\\s*)?(\\d+[A-Za-z]?)\\s*$/i);
+  if(!match)return {street:input,number:""};
+  return {street:input.slice(0,match.index).replace(/[ ,]+$/,"").trim(),number:match[1]};
+}
 async function lookupAddress(address, neighborhood){
-  const query=[address,neighborhood,"Anápolis","Goiás","Brasil"].filter(Boolean).join(", ");
-  const params=new URLSearchParams({q:query,format:"jsonv2",addressdetails:"1",limit:"8",countrycodes:"br",viewbox:"-49.20,-16.15,-48.65,-16.55",bounded:"1"});
-  const response=await fetch(`https://nominatim.openstreetmap.org/search?${params}`,{headers:{"Accept-Language":"pt-BR"}});
-  if(!response.ok) throw new Error("O serviço de endereços não respondeu. Tente novamente.");
-  const results=await response.json();return results.find(r=>isAnapolis(r.address||{}))||null;
+  const parsed=splitStreetAndNumber(address);
+  const common={format:"jsonv2",addressdetails:"1",limit:"10",countrycodes:"br",viewbox:"-49.20,-16.15,-48.65,-16.55",bounded:"1"};
+  const searches=[];
+  if(parsed.number&&parsed.street){
+    searches.push(new URLSearchParams({...common,street:`${parsed.number} ${parsed.street}`,city:"Anápolis",state:"Goiás",country:"Brasil"}));
+    searches.push(new URLSearchParams({...common,q:[parsed.number,parsed.street,neighborhood,"Anápolis","Goiás","Brasil"].filter(Boolean).join(", ")}));
+  }
+  searches.push(new URLSearchParams({...common,q:[address,neighborhood,"Anápolis","Goiás","Brasil"].filter(Boolean).join(", ")}));
+  for(const params of searches){
+    const response=await fetch(`https://nominatim.openstreetmap.org/search?${params}`,{headers:{"Accept-Language":"pt-BR"}});
+    if(!response.ok)throw new Error("O serviço de endereços não respondeu. Tente novamente.");
+    const results=await response.json();
+    const local=results.filter(r=>isAnapolis(r.address||{}));
+    if(local.length){
+      if(parsed.number){
+        const exact=local.find(r=>String(r.address?.house_number||"").toLowerCase()===parsed.number.toLowerCase());
+        if(exact)return {...exact,_requestedHouseNumber:parsed.number,_houseNumberVerified:true};
+      }
+      return {...local[0],_requestedHouseNumber:parsed.number,_houseNumberVerified:!parsed.number};
+    }
+  }
+  return null;
 }
 $("importButton").onclick=async()=>{
   const file=$("shopeeFile").files[0];
@@ -123,9 +146,9 @@ $("stopForm").addEventListener("submit",async e=>{
     if(!candidate){showValidation("bad","Endereço não confirmado em Anápolis","Não encontrei um resultado que confirme simultaneamente Anápolis, Goiás e Brasil. Não vou cadastrar um endereço de outro município. Confira o logradouro e o bairro e tente novamente.");return;}
     pendingCandidate={stop,address,neighborhood,candidate};
     const box=$("validationBox");box.className="validation good";box.replaceChildren();
-    const strong=document.createElement("strong");strong.textContent="Confirme se este é o endereço correto";
+    const strong=document.createElement("strong");strong.textContent=candidate._requestedHouseNumber&&!candidate._houseNumberVerified?"Rua localizada, mas número não confirmado":"Confirme se este é o endereço correto";
     const p=document.createElement("p");p.textContent=candidate.display_name;
-    const q=document.createElement("p");q.textContent="Resultado localizado em Anápolis-GO. Confira o número, a rua e o bairro antes de confirmar.";
+    const q=document.createElement("p");q.textContent=candidate._requestedHouseNumber&&!candidate._houseNumberVerified?`Você informou o número ${candidate._requestedHouseNumber}, mas o mapa não confirmou esse número. Confira manualmente se o imóvel é o correto antes de adicionar.`:"Resultado localizado em Anápolis-GO. Confira o número, a rua e o bairro antes de confirmar.";
     const yes=document.createElement("button");yes.className="confirm";yes.textContent="Confirmar e adicionar pacote";yes.onclick=confirmStop;
     const no=document.createElement("button");no.className="cancel";no.textContent="Não é esse endereço";no.onclick=()=>{pendingCandidate=null;box.classList.add("hidden");};
     box.append(strong,p,q,yes,no);
