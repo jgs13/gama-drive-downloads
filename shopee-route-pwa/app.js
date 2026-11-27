@@ -22,8 +22,9 @@ function groupStops(){
   });
 }
 function exportGroupedRows(groups){
-  return groups.map((group,index)=>{
+  return groups.map(group=>{
     const rows=group.items.map(item=>Array.isArray(item.values)?item.values:[]);
+    const combined=column=>[...new Set(rows.map(row=>String(row[column]??"").trim()).filter(Boolean))].join(", ");
     const firstValue=column=>{
       for(const row of rows){
         const value=row[column];
@@ -31,10 +32,12 @@ function exportGroupedRows(groups){
       }
       return "";
     };
-    const packageCodes=[...new Set(rows.map(row=>String(row[3]??"").trim()).filter(Boolean))];
     const values=HEADERS.map((_,column)=>firstValue(column));
-    values[2]=`Parada ${index+1} - ${group.items.length} ${group.items.length===1?'pacote':'pacotes'}`;
-    values[3]=packageCodes.join(", ");
+    values[0]=combined(0);
+    values[1]=combined(1);
+    const originalStops=group.stopNumbers.join(" / ");
+    values[2]=`${originalStops||"Parada não informada"} (${group.items.length} ${group.items.length===1?"pacote":"pacotes"})`;
+    values[3]=combined(3);
     values[4]=group.address||firstValue(4);
     return values;
   });
@@ -160,10 +163,10 @@ $("exportButton").onclick=async()=>{
 };
 function csvEscape(value){const s=String(value??"");return `"${s.replace(/"/g,'""')}"`;}
 $("csvButton").onclick=()=>{
-  const groups=groupStops();const rows=[["Address","Stop numbers","Delivery count","Neighborhood","City"]];
-  groups.forEach(g=>{const fullAddress=[g.address,g.neighborhood,"Anápolis","GO","Brasil"].filter(Boolean).join(", ");rows.push([fullAddress,g.stopNumbers.join(" / "),g.items.length,g.neighborhood||"","Anápolis"]);});
-  const csv="\uFEFF"+rows.map(row=>row.map(csvEscape).join(",")).join("\r\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");
+  const groups=groupStops();
+  const rows=[HEADERS,...exportGroupedRows(groups)];
+  const output="\\uFEFF"+rows.map(row=>row.map(csvEscape).join(",")).join("\\r\\n");
+  const blob=new Blob([output],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");
   a.href=url;a.download=`Shopee_Rota_Circuit_${new Date().toISOString().slice(0,10)}.csv`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
 };
 window.addEventListener("online",()=>$("connectionStatus").textContent="Conectado");
