@@ -140,37 +140,55 @@ function confirmStop(){
 }
 $("clearButton").onclick=()=>{if(!stops.length)return;if(confirm("Apagar todos os pacotes desta rota?")){stops=[];save();}};
 function spokenStopNumber(transcript){
-  const text=normalize(transcript).replace(/-/g," ").replace(/\s+/g," ").trim();
-  if(/^\d+$/.test(text))return text;
+  const raw=String(transcript||"").trim();
+  const digitMatch=raw.match(/\\d+/);
+  if(digitMatch)return String(Number(digitMatch[0]));
+  const text=normalize(raw).replace(/-/g," ").replace(/\\s+/g," ").trim()
+    .replace(/^(numero|parada)\\s+/,"").replace(/\\s+(numero|parada)$/,"");
   const units={zero:0,um:1,uma:1,dois:2,duas:2,tres:3,quatro:4,cinco:5,seis:6,sete:7,oito:8,nove:9,dez:10,onze:11,doze:12,treze:13,catorze:14,quatorze:14,quinze:15,dezesseis:16,dezessete:17,dezoito:18,dezenove:19};
   const tens={vinte:20,trinta:30,quarenta:40,cinquenta:50,sessenta:60,setenta:70,oitenta:80,noventa:90};
-  const words=text.split(" ").filter(word=>word!=="e");
-  if(words.length===1&&units[words[0]]!==undefined)return String(units[words[0]]);
-  if(words.length===1&&tens[words[0]]!==undefined)return String(tens[words[0]]);
-  if(words.length===2&&tens[words[0]]!==undefined&&units[words[1]]!==undefined)return String(tens[words[0]]+units[words[1]]);
-  if(words.length===1&&words[0]==="cem")return "100";
-  return null;
+  if(text==="cem"||text==="cento")return "100";
+  if(units[text]!==undefined)return String(units[text]);
+  if(tens[text]!==undefined)return String(tens[text]);
+  const parts=text.split(" e ").flatMap(part=>part.split(" ")).filter(Boolean);
+  let total=0;
+  for(const part of parts){
+    if(part==="cento"||part==="cem"){total+=100;continue;}
+    if(tens[part]!==undefined){total+=tens[part];continue;}
+    if(units[part]!==undefined){total+=units[part];continue;}
+    return null;
+  }
+  return total>0&&total<=999?String(total):null;
 }
 function startVoice(targetId,buttonId,fieldName){
   const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SpeechRecognition){showValidation("bad","Ditado não disponível","Use o teclado por voz do seu celular ou abra o app no Chrome atualizado.");return;}
-  const button=$(buttonId),recognition=new SpeechRecognition();
-  recognition.lang="pt-BR";recognition.interimResults=false;recognition.maxAlternatives=1;
-  button.textContent="…";button.disabled=true;
+  if(!SpeechRecognition){showValidation("bad","Ditado não disponível","Abra o aplicativo no Chrome atualizado e permita o uso do microfone.");return;}
+  const button=$(buttonId),field=$(targetId),recognition=new SpeechRecognition();
+  recognition.lang="pt-BR";recognition.interimResults=false;recognition.maxAlternatives=3;recognition.continuous=false;
+  button.textContent="Ouvindo…";button.disabled=true;button.setAttribute("aria-pressed","true");
   recognition.onresult=e=>{
-    const transcript=e.results[0][0].transcript.trim();
+    const alternatives=Array.from(e.results[0]||[]).map(result=>result.transcript.trim()).filter(Boolean);
     if(targetId==="stopNumber"){
-      const number=spokenStopNumber(transcript);
-      if(number===null){showValidation("bad","Número não reconhecido","Fale o número da parada, por exemplo: quinze, vinte e cinco ou trinta.");return;}
-      $(targetId).value=number;
+      let number=null;
+      for(const phrase of alternatives){number=spokenStopNumber(phrase);if(number!==null)break;}
+      if(number===null){showValidation("bad","Não entendi o número","Fale apenas o número da parada, por exemplo: dois, quinze ou vinte e cinco.");return;}
+      field.value=number;
     }else{
-      $(targetId).value=transcript;
+      const phrase=alternatives[0]||"";
+      if(!phrase){showValidation("bad","Não ouvi o bairro","Fale novamente, aproximando-se do microfone.");return;}
+      field.value=phrase;
     }
-    $(targetId).dispatchEvent(new Event("input",{bubbles:true}));
+    field.dispatchEvent(new Event("input",{bubbles:true}));
+    field.dispatchEvent(new Event("change",{bubbles:true}));
+    field.focus();
   };
-  recognition.onerror=()=>showValidation("bad","Falha no ditado",`Não consegui reconhecer ${fieldName}. Verifique a permissão do microfone e tente novamente.`);
-  recognition.onend=()=>{button.textContent="🎙";button.disabled=false;};
-  try{recognition.start();}catch(error){button.textContent="🎙";button.disabled=false;showValidation("bad","Não foi possível iniciar o microfone","Tente novamente em alguns segundos.");}
+  recognition.onerror=e=>{
+    const messages={ "not-allowed":"Permita o acesso ao microfone nas configurações do navegador.","no-speech":"Não detectei sua fala. Toque no microfone e tente novamente.","audio-capture":"O celular não disponibilizou o microfone.","network":"Falha de conexão durante o reconhecimento de voz."};
+    showValidation("bad","Falha no ditado",messages[e.error]||`Não consegui reconhecer ${fieldName}. Tente novamente.`);
+  };
+  recognition.onnomatch=()=>showValidation("bad","Não entendi","Fale novamente de forma clara.");
+  recognition.onend=()=>{button.textContent="🎙";button.disabled=false;button.setAttribute("aria-pressed","false");};
+  try{recognition.start();}catch(error){button.textContent="🎙";button.disabled=false;button.setAttribute("aria-pressed","false");showValidation("bad","Não foi possível iniciar o microfone","Toque novamente em alguns segundos.");}
 }
 $("voiceAddress").onclick=()=>startVoice("address","voiceAddress","endereço");
 $("voiceStopNumber").onclick=()=>startVoice("stopNumber","voiceStopNumber","número da parada");
