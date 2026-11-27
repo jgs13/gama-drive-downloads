@@ -184,7 +184,7 @@ function spokenStopNumber(transcript){
   return total>0&&total<=999?String(total):null;
 }
 function formatSpokenAddress(value){
-  const cleaned=String(value||"").trim().replace(/\\s+(?:n[uú]mero|n[º°o])\\s+(?=\\d)/i," ");
+  const cleaned=String(value||"").trim().replace(/\s+(?:n[uú]mero|n[º°o])\s+(?=\d)/i," ");
   const parsed=splitStreetAndNumber(cleaned);
   return parsed.number&&parsed.street?`${parsed.street}, ${parsed.number}`:cleaned;
 }
